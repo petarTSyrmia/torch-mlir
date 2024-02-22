@@ -966,6 +966,14 @@ def aten〇unflatten〇int〡shape(self: List[int], dim: int, sizes: List[int]) 
     shape: List[int] = []
     return self[:dim] + unflatten_shape_output + self[dim+1:]
 
+@check_shape_function([
+    Invocation(TensorOfShape(3, 2, 4), 1, 2, 1), # size of dimension == size of slice
+    Invocation(TensorOfShape(3, 2, 4), 0, 2, 2),  # size od dimension != size of slice, step > 1
+])
+def aten〇unfold〡shape(self: List[int], dimension: int, size: int, step: int) -> List[int]:
+    new_dim_size = int((self[dimension] - size) / step + 1)
+    return self[:dimension] + [new_dim_size] + self[dimension+1:] + [size]
+
 def aten〇linear〡shape(input: List[int], weight: List[int], bias: Optional[List[int]] = None) -> List[int]:
     return upstream_shape_functions.linear(input, weight, bias)
 
@@ -2238,6 +2246,11 @@ def aten〇flatten〇using_ints〡dtype(self_rank_dtype: Tuple[int, int], start_
 
 @check_dtype_function(_check_tensors_with_the_same_dtype(num_of_tensors=1, dim=0, sizes=[-1]))
 def aten〇unflatten〇int〡dtype(self_rank_dtype: Tuple[int, int], dim: int, sizes: List[int]) -> int:
+    self_rank, self_dtype = self_rank_dtype
+    return self_dtype
+
+@check_dtype_function(_check_tensors_with_the_same_dtype(num_of_tensors=1, dimension=0, size=1, step=1))
+def aten〇unfold〡dtype(self_rank_dtype: Tuple[int, int], dimension: int, size: int, step: int) -> int:
     self_rank, self_dtype = self_rank_dtype
     return self_dtype
 
