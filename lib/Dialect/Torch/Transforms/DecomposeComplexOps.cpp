@@ -1941,6 +1941,30 @@ public:
 };
 } // namespace
 
+// Decompose aten.kthvalue into: aten.sort and aten.index_select
+// def kthvalue(self: Tensor, k: int, dim: int = -1, keepdim: bool = False):
+//     sorted_self, sorted_inds = self.sort(dim=dim)
+//     ind_select = torch.tensor([k-1])
+//     values = torch.index_select(sorted_self, dim, ind_select)
+//     indices = torch.index_select(sorted_inds, dim, ind_select)
+//     if not keepdim:
+//         values = torch.squeeze(values, dim)
+//         indices = torch.squeeze(indices, dim)
+//     return (values, indices)
+namespace {
+class DecomposeAtenKthvalueOp : public OpRewritePattern<AtenKthvalueOp> {
+public:
+  using OpRewritePattern::OpRewritePattern;
+  LogicalResult matchAndRewrite(AtenKthvalueOp op,
+                                PatternRewriter &rewriter) const override {
+    
+    
+
+    return success();
+  }
+};
+} // namespace
+
 // Decompose aten.pixel_shuffle into: prims.split_dim, aten.permute, and
 // prims.collapse operations.
 //
