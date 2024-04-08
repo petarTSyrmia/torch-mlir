@@ -1961,7 +1961,7 @@ public:
     Location loc = op.getLoc();
     Value self = op.getSelf();
     Value dim = op.getDim();
-    
+
     auto context = op.getContext();
 
     auto selfType = self.getType().cast<BaseTensorType>();
@@ -1969,57 +1969,64 @@ public:
         selfType.getOptionalSizes(),
         IntegerType::get(context, 64, IntegerType::Signed));
 
+    // AtenSort should be replaced with custom quick_sort-like 
+    // implementation of an algorithm selecting k-th value,
+    // similar to https://github.com/pytorch/pytorch/blob/069270db60112704c6387cf994cf9b7298731699/aten/src/ATen/native/Sorting.cpp#L125
     auto falseValue = rewriter.create<Torch::ConstantBoolOp>(loc, false);
-    auto sortOpResult = rewriter.create<AtenSortOp>(
-        loc, self.getType(), sortIndicesType, self, dim,
-        /*descending=*/falseValue);
+    auto sortOpResult = rewriter.create<AtenSortOp>(loc, self.getType(),
+                                                    sortIndicesType, self, dim,
+                                                    /*descending=*/falseValue);
 
     Value none = rewriter.create<ConstantNoneOp>(loc);
 
     auto outType2 = op.getResultTypes()[1].dyn_cast<BaseTensorType>();
-    auto scalarTensorType = outType2.getWithSizesAndDtype(llvm::ArrayRef<int64_t>(1), IntegerType::get(op.getContext(), 64, IntegerType::Signed));
+    auto scalarTensorType = outType2.getWithSizesAndDtype(
+        llvm::ArrayRef<int64_t>(1),
+        IntegerType::get(op.getContext(), 64, IntegerType::Signed));
 
     int64_t k;
     if (!matchPattern(op.getK(), m_TorchConstantInt(&k)))
-        return rewriter.notifyMatchFailure(
-            op, "unimplemented: k must be a constant integer");
+      return rewriter.notifyMatchFailure(
+          op, "unimplemented: k must be a constant integer");
 
     bool keepdim;
     if (!matchPattern(op.getKeepdim(), m_TorchConstantBool(&keepdim)))
       return rewriter.notifyMatchFailure(
-            op, "unimplemented: keepdim must be a costant bool");
+          op, "unimplemented: keepdim must be a costant bool");
 
     Value kMinusOne =
-          rewriter.create<ConstantIntOp>(loc, rewriter.getI64IntegerAttr(k-1));
-    auto idx1 = rewriter.create<AtenScalarTensorOp>(loc, scalarTensorType, kMinusOne, /*dtype=*/none, /*layout=*/none,
+        rewriter.create<ConstantIntOp>(loc, rewriter.getI64IntegerAttr(k - 1));
+    auto idx1 = rewriter.create<AtenScalarTensorOp>(
+        loc, scalarTensorType, kMinusOne, /*dtype=*/none, /*layout=*/none,
         /*device=*/none, /*pin_memory=*/none);
 
-
-    auto indexSelectType = computeReductionType(rewriter, op,
-                             self.getType().cast<BaseTensorType>(), dim,
-                             /*keepDim=*/true);
+    auto indexSelectType = computeReductionType(
+        rewriter, op, self.getType().cast<BaseTensorType>(), dim,
+        /*keepDim=*/true);
 
     auto values = rewriter.create<AtenIndexSelectOp>(
         loc, indexSelectType, sortOpResult.getResult(0), dim, idx1);
 
-    auto indexSelectTypeIndices = indexSelectType.cast<BaseTensorType>().getWithSizesAndDtype(
-      std::nullopt, IntegerType::get(op.getContext(), 64, IntegerType::Signed)
-    );
+    auto indexSelectTypeIndices =
+        indexSelectType.cast<BaseTensorType>().getWithSizesAndDtype(
+            std::nullopt,
+            IntegerType::get(op.getContext(), 64, IntegerType::Signed));
 
     auto indices = rewriter.create<AtenIndexSelectOp>(
         loc, indexSelectTypeIndices, sortOpResult.getResult(1), dim, idx1);
 
     int64_t dimValue;
     if (!matchPattern(dim, m_TorchConstantInt(&dimValue)))
-        return rewriter.notifyMatchFailure(
-            op, "unimplemented: dim must be a constant integer");
+      return rewriter.notifyMatchFailure(
+          op, "unimplemented: dim must be a constant integer");
 
     if (!keepdim) {
-      auto squeezedValues = rewriter.create<AtenSqueezeDimOp>(loc, op.getResultTypes()[0], values, dim);
-      auto squeezedIndices = rewriter.create<AtenSqueezeDimOp>(loc, op.getResultTypes()[1], indices, dim);
+      auto squeezedValues = rewriter.create<AtenSqueezeDimOp>(
+          loc, op.getResultTypes()[0], values, dim);
+      auto squeezedIndices = rewriter.create<AtenSqueezeDimOp>(
+          loc, op.getResultTypes()[1], indices, dim);
 
       rewriter.replaceOp(op, {squeezedValues, squeezedIndices});
-      // rewriter.replaceOp(op, {values, indices});
     } else {
       rewriter.replaceOp(op, {values, indices});
     }
