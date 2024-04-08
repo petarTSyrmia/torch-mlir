@@ -11888,6 +11888,7 @@ def Torch_AtenKthvalueOp : Torch_Op<"aten.kthvalue", [
       printDefaultTorchOp(printer, *this, 4, 2);
     }
   }];
+  let hasVerifier = 1;
 }
 
 def Torch_AtenAliasCopyOp : Torch_Op<"aten.alias_copy", [
