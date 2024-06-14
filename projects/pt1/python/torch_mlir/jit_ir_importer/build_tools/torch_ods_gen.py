@@ -368,6 +368,7 @@ def emit_ops(emitter_td: TextEmitter, registry: Registry):
         "aten::zero : (Tensor) -> (Tensor)",
         "aten::fill.Scalar : (Tensor, Scalar) -> (Tensor)",
         "aten::fill.Tensor : (Tensor, Tensor) -> (Tensor)",
+        "aten::rad2deg : (Tensor) -> (Tensor)",
     ]:
         emit_with_mutating_variants(key)
     # Shape manipulations:

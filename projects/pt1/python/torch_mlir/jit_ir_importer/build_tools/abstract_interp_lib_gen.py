@@ -1256,6 +1256,9 @@ def aten〇fill〇Tensor〡shape(self: List[int], value: List[int]) -> List[int]
 def aten〇fill〇Scalar〡shape(self: List[int], value: float) -> List[int]:
     return self
 
+def aten〇rad2deg〡shape(self: List[int]) -> List[int]:
+    return self
+
 def aten〇copy〡shape(self: List[int], src: List[int], non_blocking: bool = False) -> List[int]:
     return upstream_shape_functions.unary(self)
 
@@ -2552,6 +2555,18 @@ def aten〇fill〇Scalar〡dtype(self_rank_dtype: Tuple[int, int], value: Union[
 @check_dtype_function(_check_tensors_with_the_same_dtype(tensor_shapes=[(1,), ()]))
 def aten〇fill〇Tensor〡dtype(self_rank_dtype: Tuple[int, int], value_rank_dtype: Tuple[int, int]) -> int:
     self_rank, self_dtype = self_rank_dtype
+    return self_dtype
+
+@check_dtype_function([ErrorInvocation(TensorOfShape(1, dtype=torch.complex64)),
+                       ErrorInvocation(TensorOfShape(1, dtype=torch.complex128)),
+                       Invocation(TensorOfShape(2, 3, 4, dtype=torch.int32)),
+                       Invocation(TensorOfShape(2, 3, 4, dtype=torch.float16))])
+def aten〇rad2deg〡dtype(self_rank_dtype: Tuple[int, int]) -> int:
+    self_rank, self_dtype = self_rank_dtype
+    # rad2deg is not supported for complex types
+    assert not is_complex_dtype(self_dtype)
+    if is_integer_dtype(self_dtype):
+        return torch.float32
     return self_dtype
 
 @check_dtype_function(_check_tensors_with_the_same_dtype(num_of_tensors=1))
