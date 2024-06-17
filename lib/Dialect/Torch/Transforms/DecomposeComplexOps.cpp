@@ -7552,6 +7552,30 @@ public:
 };
 } // namespace
 
+namespace {
+// Unconditionally decompose `torch.type_as` into `prim.dtype` +
+// `torch.to.dtype`.
+class DecomposeAtenRad2degOp : public OpRewritePattern<AtenRad2degOp> {
+public:
+  using OpRewritePattern::OpRewritePattern;
+  LogicalResult matchAndRewrite(AtenRad2degOp op,
+                                PatternRewriter &rewriter) const override {
+
+    Value self = op.getSelf();
+    Location loc = op.getLoc();
+
+    constexpr double M_180_PI =
+        57.295779513082320876798154814105170332405472466564;
+    Value M_180_PI_Value = rewriter.create<ConstantFloatOp>(
+        loc, rewriter.getF64FloatAttr(M_180_PI));
+    rewriter.replaceOpWithNewOp<Torch::AtenMulScalarOp>(
+        op, op.getResult().getType(), self, M_180_PI_Value);
+
+    return success();
+  }
+};
+} // namespace
+
 // Torch ops related to indexing tensors, e.g., AtenIndexTensor, AtenIndexPut.
 namespace {
 
@@ -8234,6 +8258,7 @@ public:
     addPatternIfTargetOpIsIllegal<DecomposeAtenReshapeAsOp>(patterns);
     addPatternIfTargetOpIsIllegal<DecomposeAtenTriuOp>(patterns);
     addPatternIfTargetOpIsIllegal<DecomposeAtenLinalgNormOp>(patterns);
+    addPatternIfTargetOpIsIllegal<DecomposeAtenRad2degOp>(patterns);
     // More specific conv ops
     addPatternIfTargetOpIsIllegal<DecomposeAtenConvTbcOp>(patterns);
     addPatternIfTargetOpIsIllegal<DecomposeAtenConv1dOp>(patterns);

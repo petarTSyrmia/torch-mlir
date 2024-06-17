@@ -6223,3 +6223,29 @@ class FakeQuantizePerTensorAffineRoundToEvenModule(torch.nn.Module):
 )
 def FakeQuantizePerTensorAffineRoundToEvenModule_basic(module, tu: TestUtils):
     module.forward(torch.FloatTensor([0.5, 1.5, -0.5, -1.5]))
+
+
+# ==============================================================================
+
+
+class Rad2degModule(torch.nn.Module):
+    def __init__(self):
+        super().__init__()
+
+    @export
+    @annotate_args(
+        [
+            None,
+            ([2], torch.int8, True),
+        ]
+    )
+    def forward(self, x):
+        return torch.ops.aten.rad2deg(x)
+
+
+@register_test_case(module_factory=lambda: Rad2degModule())
+def Rad2degModule_basic(module, tu: TestUtils):
+    module.forward(torch.tensor([3, 3], dtype=torch.int8))
+
+
+# ==============================================================================
